@@ -88,14 +88,6 @@ function getLocData(req,res,locationName){
 }
 
 
-
-    
-    
-
-     
-
-
-
  function Weather(obj){
     this.forecast = obj.weather.description;
     this.time = obj.datetime;
@@ -109,19 +101,6 @@ function Location(city,locData){
     this.longitude = locData[0].lon;
 }
 
-// {
-//     "name": "Rattlesnake Ledge",
-//     "location": "Riverbend, Washington",
-//     "length": "4.3",
-//     "stars": "4.4",
-//     "star_votes": "84",
-//     "summary": "An extremely popular out-and-back hike to the viewpoint on Rattlesnake Ledge.",
-//     "trail_url": "https://www.hikingproject.com/trail/7021679/rattlesnake-ledge",
-//     "conditions": "Dry: The trail is clearly marked and well maintained.",
-//     "condition_date": "2018-07-21",
-//     "condition_time": "0:00:00 "
-//   },
-
 function Trail(obj) {
     this.name =obj.name;
     this.location=obj.location;
@@ -134,6 +113,8 @@ function Trail(obj) {
     this.condition_date=obj.conditionDate.split(' ')[0];
     this.condition_time=obj.conditionDate.split(' ')[1];  
 }
+
+// handle all routes and errors
 
 function anyRoute(req,res){
     res.status(404).send(" location Not found ")

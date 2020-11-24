@@ -5,28 +5,48 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
+const pg = require('pg');
 
 //App setup:
 const superagent = require('superagent');
 const server = express();
 server.use(cors());
 const PORT =process.env.PORT || 3500;
-
+const client = new pg.Client(process.env.DATABASE_URL);
 
 //Routes
 server.get('/location',locationHandler);
 server.get('/weather',weatherHandler);
 server.get('/trails',trailHandler);
 
-
+// handlers:
 function locationHandler (req,res){
+
     let locationName = req.query.city;
-    getLocData(req,res,locationName)
-    
-    .then(data=>{ // return the current location object as it declared in the constuctor
-        res.json(data);
+    checkLocation(locationName).then((result)=>{
+        console.log(result);
+        if(result.length){
+            res.json(result[0]);
+        }
+        else{
+        getLocData(req,res,locationName)
+        .then(data=>{ // return the current location object as it declared in the constuctor
+            let SQL = `INSERT INTO locations VALUES ($1,$2,$3,$4)`;
+            let safaValues = [
+                data.search_query,
+                data.formatted_query,
+                data.latitude,
+                data.longitude
+            ];
+            client.query(SQL,safaValues).then(()=>{
+                console.log('location added successfully..');
+                res.json(data);   
+            }).catch((e)=>{errorHandler(e,req,res)});
+        })
+        .catch(()=>{errorHandler('Failed in the location handler',req,res)});}
+            
+            
     })
-    .catch(()=>{errorHandler('Failed in the location handler',req,res)});
 };
 
 function weatherHandler(req,res){
@@ -70,6 +90,7 @@ function trailHandler(req,res) {
     .catch(()=>{errorHandler("error in trailHandler..",req,res)});
 };
 
+// helper functions: 
 
 function getLocData(req,res,locationName){
     
@@ -87,7 +108,17 @@ function getLocData(req,res,locationName){
             });
 }
 
+function checkLocation (city) {
+    let safeValue = [city];
+    let SQL = `SELECT * FROM locations WHERE search_query = $1`;
+    return client.query(SQL, safeValue)
+    .then(result=>{
+        return result.rows;
+    });
+}	
 
+
+//constructors:
  function Weather(obj){
     this.forecast = obj.weather.description;
     this.time = obj.datetime;
@@ -114,8 +145,9 @@ function Trail(obj) {
     this.condition_time=obj.conditionDate.split(' ')[1];  
 }
 
-// handle all routes and errors
 
+
+// handle all routes and errors
 function anyRoute(req,res){
     res.status(404).send(" location Not found ")
 };
@@ -128,6 +160,10 @@ function errorHandler(error,req,res){
 server.get('*',anyRoute);
 server.use(errorHandler);
 
-server.listen(PORT, ()=>{
-  console.log('the server is lestining on port '+PORT);
-});
+client.connect().then(()=>{
+    server.listen(PORT, ()=>{
+      console.log('the server is lestining on port '+PORT);
+    });
+
+})
+.catch(e=>console.log('error, conniction with db is failed--- ',e0));

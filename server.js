@@ -18,6 +18,8 @@ const client = new pg.Client(process.env.DATABASE_URL);
 server.get('/location',locationHandler);
 server.get('/weather',weatherHandler);
 server.get('/trails',trailHandler);
+server.get('/movies', movieHandler);
+server.get('/yelp', yelpHandler);
 
 // handlers:
 function locationHandler (req,res){
@@ -90,6 +92,38 @@ function trailHandler(req,res) {
     .catch(()=>{errorHandler("error in trailHandler..",req,res)});
 };
 
+function yelpHandler(request, response) {
+    let city = request.query.search_query;
+    let page = request.query.page;
+    let offset = ((page -1) * 5 + 1);
+    let key = process.env.YELP_API_KEY;
+    let url = `https://api.yelp.com/v3/businesses/search?location=${city}&limit=5&offset=${offset}`;
+
+    superagent.get(url)
+    .set({'Authorization': 'Bearer ' + key})
+    .then(data => {
+        let yelpData = data.body.businesses.map(value => {
+            return new Yelp(value);
+        })
+        response.send(yelpData);
+    })
+}
+
+function movieHandler (request, response) {
+    let region = request.query.search_query;
+    let key = process.env.MOVIE_API_KEY;
+    let url = `https://api.themoviedb.org/3/search/movie?api_key=${key}&query=${region}`;
+
+    superagent.get(url)
+    .then(data=> {
+        let movieArray = data.body.results.map(movie => {
+            return new Movie(movie);
+        })
+        response.status(200).json(movieArray);
+    });
+}
+
+
 // helper functions: 
 
 function getLocData(req,res,locationName){
@@ -145,6 +179,24 @@ function Trail(obj) {
     this.condition_time=obj.conditionDate.split(' ')[1];  
 }
 
+function Movie(value) {
+    this.title = value.original_title;
+    this.overview = value.overview;
+    this.average_votes = value.vote_average;
+    this.total_votes = value.vote_count;
+    this.image_url = 'https://image.tmdb.org/t/p/w500' + value.poster_path;
+    this.popularity = value.popularity;
+    this.released_on = value.release_date;
+}
+
+function Yelp(value) {
+    this.name = value.name;
+    this.image_url = value.image_url;
+    this.price = value.price;
+    this.rating = value.rating;
+    this.url = value.url;
+}
+
 
 
 // handle all routes and errors
@@ -166,4 +218,4 @@ client.connect().then(()=>{
     });
 
 })
-.catch(e=>console.log('error, conniction with db is failed--- ',e0));
+.catch(e=>console.log('error, connection with db is failed--- ',e));

@@ -107,6 +107,7 @@ function yelpHandler(request, response) {
         })
         response.send(yelpData);
     })
+    .catch("error within yelp handler...",request,response);
 }
 
 function movieHandler (request, response) {
@@ -120,7 +121,8 @@ function movieHandler (request, response) {
             return new Movie(movie);
         })
         response.status(200).json(movieArray);
-    });
+    })
+    .catch("error within movies handler...",request,response);
 }
 
 
